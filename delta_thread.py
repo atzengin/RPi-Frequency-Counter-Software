@@ -123,8 +123,8 @@ class CloneThread(QThread):
             #wiringpi.delay(self.interval-2) # Delay for interval ms
             
             if self.interval > 0:
-                #time.sleep(((self.interval)/1000)-.00002)
-                time.sleep(0.19922)
+                time.sleep(((self.interval)/1000)-.00002)
+                #time.sleep(0.19922)
             #time.sleep(0.99838)
             
             ## store the count value into internal storage register
