@@ -20,9 +20,9 @@ byteSelect = [5,6,13,19] # 4 bit for byte-selection GAL = 5, GAU = 6, GBL = 13, 
 reset = 20
 relay = [12, 16]
 rclk = 26
-
-
-
+    
+TCP_IP = "172.28.1.100"
+TCP_PORT = 65432
 
 # See this page for setup :http://wiringpi.com/reference/setup/ 
 wiringpi.wiringPiSetupGpio()
@@ -111,7 +111,7 @@ class CloneThread(QThread):
     def run(self):
         
         while True:
-            data = 0
+            #data = 0
             
             # reset the counter
             wiringpi.digitalWrite(reset, 0)
@@ -231,6 +231,11 @@ class Delta(QObject):
         
 
         self.timestamp = 0
+        
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.connect((TCP_IP, TCP_PORT))
+        self.s.sendall(b'Connected')
+        
         self.clear()
 #        self.gui_thread = CloneThread()  # This is the thread object
 #        #Connect the signal from the thread to the finished method
@@ -242,30 +247,23 @@ class Delta(QObject):
 
     def close(self):
         self.HWOFF()
+        self.s.sendall(b'close')
         QCoreApplication.instance().quit()
        
         
     def clear(self):
         self.gui.liste_sayim.clear()
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.s.connect(("8.8.8.8", 80))
-        
-        self.UDP_IP = "172.28.1.100"
-        self.UDP_PORT = 5005
-        self.MESSAGE = "Hello, World!"
-
-        sock = socket.socket(socket.AF_INET, # Internet
-                             socket.SOCK_DGRAM) # UDP
-        sock.sendto(bytes(self.MESSAGE, "utf-8"), (self.UDP_IP, self.UDP_PORT))
-
-        self.gui.liste_sayim.append("IP Address : " + self.s.getsockname()[0])
+        #self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        #self.s.connect(("8.8.8.8", 80))
+        self.s.sendall(b'clear')
+        #self.gui.liste_sayim.append("IP Address : " + self.s.getsockname()[0])
         self.gui.liste_sayim.append(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()))
-        self.s.close()
+        #self.s.close()
     
     
     def startStop(self):
         if self.state == 1: #stop
-            print("data acquisition started")
+            print("data acquisition stopped")
             self.gui.liste_sayim.append("Timestamp\tCH1 Count\tCH1 Count/sec\tCH2 Count\tCH2 Count/sec")
             self.gui.liste_sayim.append("Stop Acquisition")
             self.gui_thread.terminate()
@@ -275,7 +273,7 @@ class Delta(QObject):
             self.gui.interval.setEnabled(True)
             self.timestamp = 0
         elif self.state == 0: #start
-            print("data acquisition stopped")
+            print("data acquisition started")
             self.gui.interval.setEnabled(False)
             scan_interval = self.gui.interval.value()
             self.gui_thread = CloneThread(scan_interval)  # This is the thread object
@@ -358,6 +356,9 @@ class Delta(QObject):
         self.gui.liste_sayim.append(format(self.timestamp) + "[ms]\t" + format(result[0]) + "\t" + format(result[1]) + "\t" + format(result[2]) + "\t" + format(result[3]))
         self.gui.labelCH1.setText( str( float("{0:.2f}".format(float(result[1])/1000)) ) + "\tkHz")
         self.gui.labelCH2.setText( str( float("{0:.2f}".format(float(result[3])/1000)) ) + "\tkHz")
+        #print(result[0])
+        #print(type(bytes(str(result[0]), 'utf-8')))
+        self.s.sendall(bytes(str(result), 'utf-8'))
         QtWidgets.QApplication.processEvents() #update gui for pyqt
 
 
