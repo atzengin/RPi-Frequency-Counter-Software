@@ -20,14 +20,10 @@ byteSelect = [5,6,13,19] # 4 bit for byte-selection GAL = 5, GAU = 6, GBL = 13, 
 reset = 20
 relay = [12, 16]
 rclk = 26
-    
-TCP_IP = "172.28.1.100"
-TCP_PORT = 65432
-
+   
 # See this page for setup :http://wiringpi.com/reference/setup/ 
 wiringpi.wiringPiSetupGpio()
 #wiringpi.wiringPiSetupSys()
-scan_interval = 200 # ms
 
 
 def setup_pi(): 
@@ -232,9 +228,6 @@ class Delta(QObject):
 
         self.timestamp = 0
         
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect((TCP_IP, TCP_PORT))
-        self.s.sendall(b'Connected')
         
         self.clear()
 #        self.gui_thread = CloneThread()  # This is the thread object
@@ -247,7 +240,11 @@ class Delta(QObject):
 
     def close(self):
         self.HWOFF()
-        self.s.sendall(b'close')
+        if self.gui.checkbox_send_TCP.isChecked() == 1:
+            try:
+                self.s.sendall(b'close')
+            except:
+                print('Close TCP signal has not been sent!')
         QCoreApplication.instance().quit()
        
         
@@ -255,7 +252,7 @@ class Delta(QObject):
         self.gui.liste_sayim.clear()
         #self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         #self.s.connect(("8.8.8.8", 80))
-        self.s.sendall(b'clear')
+        #self.s.sendall(b'clear')
         #self.gui.liste_sayim.append("IP Address : " + self.s.getsockname()[0])
         self.gui.liste_sayim.append(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()))
         #self.s.close()
@@ -268,13 +265,17 @@ class Delta(QObject):
             self.gui.liste_sayim.append("Stop Acquisition")
             self.gui_thread.terminate()
             del self.gui_thread
-            self.gui.button_stop.setText("Start Data Acquisition")
+            self.gui.button_stop.setText("Start Acquisition")
             self.state = 0
             self.gui.interval.setEnabled(True)
+            self.gui.checkbox_send_TCP.setEnabled(True)
+            self.gui.lineEdit_IP.setEnabled(True)
             self.timestamp = 0
         elif self.state == 0: #start
             print("data acquisition started")
             self.gui.interval.setEnabled(False)
+            self.gui.checkbox_send_TCP.setEnabled(False)
+            self.gui.lineEdit_IP.setEnabled(False)
             scan_interval = self.gui.interval.value()
             self.gui_thread = CloneThread(scan_interval)  # This is the thread object
             self.gui_thread.signal.connect(self.finished)
@@ -284,7 +285,20 @@ class Delta(QObject):
             self.gui.liste_sayim.append("Start Acquisition")
             self.gui.liste_sayim.append(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()))
             self.gui.liste_sayim.append("Timestamp\tCH1 Count\tCH1 Count/sec\tCH2 Count\tCH2 Count/sec")
-            self.gui.button_stop.setText("Stop Data Acquisition")
+            self.gui.button_stop.setText("Stop Acquisition")
+            
+            if self.gui.checkbox_send_TCP.isChecked() == 1:
+                try:
+                    self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    #self.s.connect((TCP_IP , TCP_PORT))
+                    self.s.connect((self.gui.lineEdit_IP.text(), self.gui.lineEdit_Port.text()))
+                    self.s.sendall(b'Connected')
+                    print('TCP Connection OK')
+                    self.gui.liste_sayim.append('TCP Connection OK')
+                except:
+                    print('TCP Connection NG!')
+                    self.gui.liste_sayim.append('TCP Connection NG!')
+            
             self.state = 1
 
 
@@ -358,7 +372,15 @@ class Delta(QObject):
         self.gui.labelCH2.setText( str( float("{0:.2f}".format(float(result[3])/1000)) ) + "\tkHz")
         #print(result[0])
         #print(type(bytes(str(result[0]), 'utf-8')))
-        self.s.sendall(bytes(str(result), 'utf-8'))
+        
+        if self.gui.checkbox_send_TCP.isChecked() == 1:
+            try:
+                self.s.sendall(bytes(str(result), 'utf-8'))
+            except:
+                print('TCP send error!')
+                self.gui.liste_sayim.append('TCP send error!')
+        
+        #self.s.sendall(b'tarik')
         QtWidgets.QApplication.processEvents() #update gui for pyqt
 
 
@@ -367,7 +389,8 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     delta = Delta(app)
     #delta.form.showFullScreen()
-    delta.form.show()
+    #delta.form.show()
+    delta.form.showMaximized()
     sys.exit(app.exec_())
     
 
