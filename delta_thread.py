@@ -270,12 +270,14 @@ class Delta(QObject):
             self.gui.interval.setEnabled(True)
             self.gui.checkbox_send_TCP.setEnabled(True)
             self.gui.lineEdit_IP.setEnabled(True)
+            self.gui.lineEdit_Port.setEnabled(True)
             self.timestamp = 0
         elif self.state == 0: #start
             print("data acquisition started")
             self.gui.interval.setEnabled(False)
             self.gui.checkbox_send_TCP.setEnabled(False)
             self.gui.lineEdit_IP.setEnabled(False)
+            self.gui.lineEdit_Port.setEnabled(False)
             scan_interval = self.gui.interval.value()
             self.gui_thread = CloneThread(scan_interval)  # This is the thread object
             self.gui_thread.signal.connect(self.finished)
@@ -291,7 +293,7 @@ class Delta(QObject):
                 try:
                     self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     #self.s.connect((TCP_IP , TCP_PORT))
-                    self.s.connect((self.gui.lineEdit_IP.text(), self.gui.lineEdit_Port.text()))
+                    self.s.connect((self.gui.lineEdit_IP.text(), int(self.gui.lineEdit_Port.text())))
                     self.s.sendall(b'Connected')
                     print('TCP Connection OK')
                     self.gui.liste_sayim.append('TCP Connection OK')
