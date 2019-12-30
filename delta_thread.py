@@ -11,6 +11,7 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QThread, pyqtSignal, QObject, QDateTime, QCoreApplication
 import time
 import socket
+import os
 
 
 # Read first 16 bits of Wiring Pins
@@ -250,12 +251,14 @@ class Delta(QObject):
         
     def clear(self):
         self.gui.liste_sayim.clear()
-        #self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        #self.s.connect(("8.8.8.8", 80))
-        #self.s.sendall(b'clear')
-        #self.gui.liste_sayim.append("IP Address : " + self.s.getsockname()[0])
+
         self.gui.liste_sayim.append(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()))
-        #self.s.close()
+        
+        self.f = os.popen("ifconfig wlan0 | grep \"inet\ \" | awk '{print $2}'")
+        self.ip = self.f.read()
+        print("Your Computer IPS is:" + str(self.ip))
+        self.gui.liste_sayim.append('IP Address : '+ str(self.ip))
+
     
     
     def startStop(self):
