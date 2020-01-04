@@ -178,37 +178,37 @@ class Delta(QObject):
         self.gui.button_save.clicked.connect(self.saveTXT)
         self.gui.button_close.clicked.connect(self.close)
         
-        self.gui.on_time.setStyleSheet(
-                               #"QSpinBox::up-arrow { border-left: 17px solid none;"
-                               #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
-                               #"QSpinBox::up-arrow:hover { border-left: 17px solid none;"
-                               #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
-                               "QSpinBox::up-button { width: 40px; height: 20px; }"
-                               #"QSpinBox::up-button:hover { width: 40px; height: 20px; }"
+        # self.gui.on_time.setStyleSheet(
+        #                         #"QSpinBox::up-arrow { border-left: 17px solid none;"
+        #                         #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
+        #                         #"QSpinBox::up-arrow:hover { border-left: 17px solid none;"
+        #                         #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
+        #                         "QSpinBox::up-button { width: 20px; height: 20px; }"
+        #                         #"QSpinBox::up-button:hover { width: 40px; height: 20px; }"
  
-                               #"QSpinBox::down-arrow { border-left: 17px solid none;"
-                               #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
-                               #"QSpinBox::down-arrow:hover { border-left: 17px solid none;"
-                               #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
-                               "QSpinBox::down-button { width: 40px; height: 20px; }"
-                               #"QSpinBox::down-button:hover { width: 40px; height: 20px; }"
-            )
+        #                         #"QSpinBox::down-arrow { border-left: 17px solid none;"
+        #                         #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
+        #                         #"QSpinBox::down-arrow:hover { border-left: 17px solid none;"
+        #                         #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
+        #                         "QSpinBox::down-button { width: 20; height: 20px; }"
+        #                         #"QSpinBox::down-button:hover { width: 40px; height: 20px; }"
+        #     )
         
-        self.gui.interval.setStyleSheet(
-                               #"QSpinBox::up-arrow { border-left: 17px solid none;"
-                               #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
-                               #"QSpinBox::up-arrow:hover { border-left: 17px solid none;"
-                               #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
-                               "QSpinBox::up-button { width: 40px; height: 20px; }"
-                               #"QSpinBox::up-button:hover { width: 40px; height: 20px; }"
+        # self.gui.interval.setStyleSheet(
+        #                        #"QSpinBox::up-arrow { border-left: 17px solid none;"
+        #                        #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
+        #                        #"QSpinBox::up-arrow:hover { border-left: 17px solid none;"
+        #                        #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
+        #                        "QSpinBox::up-button { width: 40px; height: 20px; }"
+        #                        #"QSpinBox::up-button:hover { width: 40px; height: 20px; }"
  
-                               #"QSpinBox::down-arrow { border-left: 17px solid none;"
-                               #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
-                               #"QSpinBox::down-arrow:hover { border-left: 17px solid none;"
-                               #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
-                               "QSpinBox::down-button { width: 40px; height: 20px; }"
-                               #"QSpinBox::down-button:hover { width: 40px; height: 20px; }"
-            )
+        #                        #"QSpinBox::down-arrow { border-left: 17px solid none;"
+        #                        #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
+        #                        #"QSpinBox::down-arrow:hover { border-left: 17px solid none;"
+        #                        #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
+        #                        "QSpinBox::down-button { width: 40px; height: 20px; }"
+        #                        #"QSpinBox::down-button:hover { width: 40px; height: 20px; }"
+        #     )
         
         self.timestamp = 0
         self.updateInfo()
@@ -277,7 +277,7 @@ class Delta(QObject):
             
             self.gui.liste_sayim.append("Start Acquisition")
             self.gui.liste_sayim.append(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()))
-            self.gui.liste_sayim.append("Timestamp\tCH1 Count\tCH1 Count/sec\tCH2 Count\tCH2 Count/sec")
+            self.gui.liste_sayim.append("Timestamp\tCH1 Count\tCH1 Count/sec\tCH2 Count\tCH2 Count/sec\nStarting in ")
             self.gui.button_stop.setText("Stop Acquisition")
             
             if self.gui.checkbox_send_TCP.isChecked() == 1:
@@ -365,7 +365,8 @@ class Delta(QObject):
             # will find more innovative solution here!
             self.firstData -= 1
             self.start_time = result[4] # get starting time
-            self.gui.liste_sayim.append('Starting in ' + str(self.firstData))
+            #self.gui.liste_sayim.append('Starting in ' + str(self.firstData))
+            self.gui.liste_sayim.insertPlainText(str(self.firstData) + ' ')
             
         else:
 
