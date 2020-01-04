@@ -1,14 +1,14 @@
 #!/usr/bin/python3
 
 # IMPORTANT
-# WirinPi must be installed
+# WiringPi must be installed
 
 import sys
 import wiringpi
 import ui
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import QThread, pyqtSignal, QObject, QDateTime, QCoreApplication
+from PyQt5.QtCore import QTimer, QThread, pyqtSignal, QObject, QDateTime, QCoreApplication
 import time
 import socket
 import os
@@ -97,72 +97,55 @@ class timerThread(QThread):
         print('t')
         
 
-class CloneThread(QThread):
+class dataAcquisitionTimer(QObject):
     signal = pyqtSignal('PyQt_PyObject')
-    wiringpi.wiringPiSetupGpio()
+    
     def __init__(self, interval):
         QThread.__init__(self)
-        self.interval = interval
-         
-    # run method gets called when we start the thread
-    def run(self):
         
-        while True:
-            #data = 0
-            
-            # reset the counter
-            wiringpi.digitalWrite(reset, 0)
-            wiringpi.delayMicroseconds(1)
-            # wiringpi.delayMicroseconds(1)
-            wiringpi.digitalWrite(reset, 1)
-            # print(self.interval)
-            
-            #wiringpi.delay(self.interval-2) # Delay for interval ms
-            
-            if self.interval > 0:
-                time.sleep(((self.interval)/1000)-.00002)
-                #time.sleep(0.19922)
-            #time.sleep(0.99838)
-            
-            ## store the count value into internal storage register
-            # this was disabled due to an error. Didn't work when RCLK was not connected to CLK.
-            # Will be checked in the next version.
-            #wiringpi.digitalWrite(rclk, 1)
-            ##wiringpi.delayMicroseconds(1)
-            #wiringpi.digitalWrite(rclk, 0)
+        self.interval = interval
+        self.data_timer = QTimer()
+        self.data_timer.timeout.connect(self.getData)
+        self.data_timer.start(self.interval)
+        
+    def stop(self):
+        self.data_timer.stop()
+        del self.data_timer
+        
+    def getData(self):
+        self.currentTime = QDateTime.currentMSecsSinceEpoch()
+        
+        wiringpi.digitalWrite(byteSelect[0], 0) # select the first byte
+        self.data1 = self.read(0) # read first counter
+        self.data5 = self.read(1) # read second counter
+        wiringpi.digitalWrite(byteSelect[0], 1)
+        
+        wiringpi.digitalWrite(byteSelect[1], 0) # select the second byte
+        self.data2 = self.read(0) # read first counter
+        self.data6 = self.read(1) # read second counter
+        wiringpi.digitalWrite(byteSelect[1], 1)
+        
+        wiringpi.digitalWrite(byteSelect[2], 0) # select the third byte
+        self.data3 = self.read(0) # read first counter
+        self.data7 = self.read(1) # read second counter
+        wiringpi.digitalWrite(byteSelect[2], 1)
+        
+        wiringpi.digitalWrite(byteSelect[3], 0) # select the forth byte
+        self.data4 = self.read(0) # read first counter
+        self.data8 = self.read(1) # read second counter
+        wiringpi.digitalWrite(byteSelect[3], 1)
+        
+        # reset the counter
+        wiringpi.digitalWrite(reset, 0)
+        wiringpi.delayMicroseconds(1)
+        wiringpi.digitalWrite(reset, 1)
+        
+        self.data_cnt1 = (self.data4<<24) | (self.data3<<16) | (self.data2<<8) | (self.data1)
+        self.data_cnt2 = (self.data8<<24) | (self.data7<<16) | (self.data6<<8) | (self.data5)
+        self.countms_cnt1 = str(self.data_cnt1*(1000/self.interval))
+        self.countms_cnt2 = str(self.data_cnt2*(1000/self.interval))
 
-    
-            wiringpi.digitalWrite(byteSelect[0], 0) # select the first byte
-            data1 = self.read(0) # read first counter
-            data5 = self.read(1) # read second counter
-            wiringpi.digitalWrite(byteSelect[0], 1)
-            
-            wiringpi.digitalWrite(byteSelect[1], 0) # select the second byte
-            data2 = self.read(0) # read first counter
-            data6 = self.read(1) # read second counter
-            wiringpi.digitalWrite(byteSelect[1], 1)
-            
-            wiringpi.digitalWrite(byteSelect[2], 0) # select the third byte
-            data3 = self.read(0) # read first counter
-            data7 = self.read(1) # read second counter
-            wiringpi.digitalWrite(byteSelect[2], 1)
-            
-            wiringpi.digitalWrite(byteSelect[3], 0) # select the forth byte
-            data4 = self.read(0) # read first counter
-            data8 = self.read(1) # read second counter
-            wiringpi.digitalWrite(byteSelect[3], 1)
-            
-            
-            data_cnt1 = (data4<<24) | (data3<<16) | (data2<<8) | (data1)
-            data_cnt2 = (data8<<24) | (data7<<16) | (data6<<8) | (data5)
-            countms_cnt1 = str(data_cnt1*(1000/self.interval))
-            countms_cnt2 = str(data_cnt2*(1000/self.interval))
-            
-            #print("data = ", countms_cnt1, data_cnt1, data4, data3, data2, data1, countms_cnt2, data_cnt2, data8, data7, data6, data5)
-            
-            #count = str(bin(data))
-            self.signal.emit([data_cnt1, countms_cnt1, data_cnt2, countms_cnt2, QDateTime.currentMSecsSinceEpoch()])
-            #gui.liste_sayim.append(str(data*(1000/self.scan_interval)))
+        self.signal.emit([self.data_cnt1, self.countms_cnt1, self.data_cnt2, self.countms_cnt2, self.currentTime])
         
     def read(self, byte):
         self.veri = 0
@@ -185,6 +168,7 @@ class Delta(QObject):
         self.form = QtWidgets.QWidget()
         self.gui.setupUi(self.form)
         self.form.setGeometry(0, 40, 800, 450)
+        self.form.setWindowTitle('Pulse Counter')
         self.gui.button_HW_off.setEnabled(False)
         
         self.gui.button_HW_off.clicked.connect(self.HWOFF)
@@ -226,16 +210,8 @@ class Delta(QObject):
                                #"QSpinBox::down-button:hover { width: 40px; height: 20px; }"
             )
         
-
         self.timestamp = 0
-        
-        
-        self.clear()
-#        self.gui_thread = CloneThread()  # This is the thread object
-#        #Connect the signal from the thread to the finished method
-#        self.gui_thread.signal.connect(self.finished)
-#        self.gui_thread.start()
-        
+        self.updateInfo()
         self.state = 0 # data acquisition state
 
 
@@ -250,15 +226,24 @@ class Delta(QObject):
        
         
     def clear(self):
-        self.gui.liste_sayim.clear()
-
-        self.gui.liste_sayim.append(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()))
         
+        qm = QtWidgets.QMessageBox
+        self.reply = qm.question(None,'Warning', "Are you sure to clear logs? Be sure if they are saved!", qm.Yes | qm.No)
+
+        if self.reply == qm.Yes:
+            self.gui.liste_sayim.clear()
+            self.updateInfo()
+    
+    
+    def updateInfo(self):
+        
+        self.gui.liste_sayim.append(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()))
+        self.gui.labelCH1.setText("")
+        self.gui.labelCH2.setText("")
         self.f = os.popen("ifconfig wlan0 | grep \"inet\ \" | awk '{print $2}'")
         self.ip = self.f.read()
-        print("Your Computer IPS is:" + str(self.ip))
+        print("IP Address : " + str(self.ip))
         self.gui.liste_sayim.append('IP Address : '+ str(self.ip))
-
     
     
     def startStop(self):
@@ -266,8 +251,10 @@ class Delta(QObject):
             print("data acquisition stopped")
             self.gui.liste_sayim.append("Timestamp\tCH1 Count\tCH1 Count/sec\tCH2 Count\tCH2 Count/sec")
             self.gui.liste_sayim.append("Stop Acquisition")
-            self.gui_thread.terminate()
-            del self.gui_thread
+            
+            self.gui_timer.stop()
+            del self.gui_timer
+            
             self.gui.button_stop.setText("Start Acquisition")
             self.state = 0
             self.gui.interval.setEnabled(True)
@@ -282,11 +269,12 @@ class Delta(QObject):
             self.gui.lineEdit_IP.setEnabled(False)
             self.gui.lineEdit_Port.setEnabled(False)
             scan_interval = self.gui.interval.value()
-            self.gui_thread = CloneThread(scan_interval)  # This is the thread object
-            self.gui_thread.signal.connect(self.finished)
-            self.gui.liste_sayim.append("Interval : " + format(scan_interval))
-            self.gui_thread.start()
-            self.start_time = QDateTime.currentMSecsSinceEpoch() # start time in [ms]
+            
+            self.gui_timer = dataAcquisitionTimer(scan_interval)
+            self.firstData = 10  # how many count data will be dropped at first
+            self.gui_timer.signal.connect(self.finished)
+            self.gui.liste_sayim.append("Interval : " + format(scan_interval) + " ms")
+            
             self.gui.liste_sayim.append("Start Acquisition")
             self.gui.liste_sayim.append(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()))
             self.gui.liste_sayim.append("Timestamp\tCH1 Count\tCH1 Count/sec\tCH2 Count\tCH2 Count/sec")
@@ -370,23 +358,33 @@ class Delta(QObject):
 
 
     def finished(self, result):
-        #print("c")
-        self.timestamp = result[4] - self.start_time
-        self.gui.liste_sayim.append(format(self.timestamp) + "[ms]\t" + format(result[0]) + "\t" + format(result[1]) + "\t" + format(result[2]) + "\t" + format(result[3]))
-        self.gui.labelCH1.setText( str( float("{0:.2f}".format(float(result[1])/1000)) ) + "\tkHz")
-        self.gui.labelCH2.setText( str( float("{0:.2f}".format(float(result[3])/1000)) ) + "\tkHz")
-        #print(result[0])
-        #print(type(bytes(str(result[0]), 'utf-8')))
+        #print(self.state)
         
-        if self.gui.checkbox_send_TCP.isChecked() == 1:
-            try:
-                self.s.sendall(bytes(str(result), 'utf-8'))
-            except:
-                print('TCP send error!')
-                self.gui.liste_sayim.append('TCP send error!')
-        
-        #self.s.sendall(b'tarik')
-        QtWidgets.QApplication.processEvents() #update gui for pyqt
+        if self.firstData > 0:
+            # do nothing. drop first data. 
+            # will find more innovative solution here!
+            self.firstData -= 1
+            self.start_time = result[4] # get starting time
+            self.gui.liste_sayim.append('Starting in ' + str(self.firstData))
+            
+        else:
+
+            self.timestamp = result[4] - self.start_time
+            self.gui.liste_sayim.append(format(self.timestamp) + "[ms]\t" + format(result[0]) + "\t" + format(result[1]) + "\t" + format(result[2]) + "\t" + format(result[3]))
+            self.gui.labelCH1.setText( str( float("{0:.2f}".format(float(result[1])/1000)) ) + "\tkHz")
+            self.gui.labelCH2.setText( str( float("{0:.2f}".format(float(result[3])/1000)) ) + "\tkHz")
+            #print(result[0])
+            #print(type(bytes(str(result[0]), 'utf-8')))
+            
+            if self.gui.checkbox_send_TCP.isChecked() == 1:
+                try:
+                    self.s.sendall(bytes(str(result), 'utf-8'))
+                except:
+                    print('TCP send error!')
+                    self.gui.liste_sayim.append('TCP send error!')
+            
+            #self.s.sendall(b'tarik')
+            QtWidgets.QApplication.processEvents() #update gui for pyqt
 
 
 def main():
