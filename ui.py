@@ -2,11 +2,12 @@
 
 # Form implementation generated from reading ui file 'rpi_gui.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.12.2
 #
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -36,6 +37,7 @@ class Ui_Form(object):
         self.button_stop.setSizePolicy(sizePolicy)
         self.button_stop.setMinimumSize(QtCore.QSize(0, 0))
         self.button_stop.setMaximumSize(QtCore.QSize(96, 16777215))
+        self.button_stop.setAutoFillBackground(True)
         self.button_stop.setObjectName("button_stop")
         self.gridLayout_4.addWidget(self.button_stop, 7, 0, 1, 1)
         self.label = QtWidgets.QLabel(self.groupBox)
@@ -71,6 +73,7 @@ class Ui_Form(object):
         sizePolicy.setHeightForWidth(self.button_close.sizePolicy().hasHeightForWidth())
         self.button_close.setSizePolicy(sizePolicy)
         self.button_close.setMaximumSize(QtCore.QSize(96, 16777215))
+        self.button_close.setAutoFillBackground(True)
         self.button_close.setObjectName("button_close")
         self.gridLayout_4.addWidget(self.button_close, 8, 0, 1, 1)
         self.interval = QtWidgets.QSpinBox(self.groupBox)
@@ -79,6 +82,7 @@ class Ui_Form(object):
         font = QtGui.QFont()
         font.setPointSize(16)
         self.interval.setFont(font)
+        self.interval.setAutoFillBackground(False)
         self.interval.setMinimum(1)
         self.interval.setMaximum(10000)
         self.interval.setSingleStep(100)
@@ -92,6 +96,7 @@ class Ui_Form(object):
         sizePolicy.setHeightForWidth(self.button_save.sizePolicy().hasHeightForWidth())
         self.button_save.setSizePolicy(sizePolicy)
         self.button_save.setMaximumSize(QtCore.QSize(96, 16777215))
+        self.button_save.setAutoFillBackground(True)
         self.button_save.setObjectName("button_save")
         self.gridLayout_4.addWidget(self.button_save, 6, 0, 1, 1)
         self.verticalLayout.addWidget(self.groupBox)
@@ -104,6 +109,7 @@ class Ui_Form(object):
         self.liste_sayim.setObjectName("liste_sayim")
         self.gridLayout_2.addWidget(self.liste_sayim, 0, 1, 1, 1)
         self.button_clear = QtWidgets.QPushButton(self.groupBox_3)
+        self.button_clear.setAutoFillBackground(True)
         self.button_clear.setObjectName("button_clear")
         self.gridLayout_2.addWidget(self.button_clear, 2, 1, 1, 1)
         self.gridGroupBox = QtWidgets.QGroupBox(self.groupBox_3)
@@ -192,6 +198,7 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.button_HW_off.sizePolicy().hasHeightForWidth())
         self.button_HW_off.setSizePolicy(sizePolicy)
+        self.button_HW_off.setAutoFillBackground(True)
         self.button_HW_off.setAutoDefault(False)
         self.button_HW_off.setDefault(False)
         self.button_HW_off.setFlat(False)
@@ -210,7 +217,7 @@ class Ui_Form(object):
         self.button_stop.setText(_translate("Form", "Start Acquisition"))
         self.label.setText(_translate("Form", "Interval [ms]"))
         self.checkbox_send_TCP.setText(_translate("Form", "Send via TCP"))
-        self.lineEdit_IP.setText(_translate("Form", "123.12.1.100"))
+        self.lineEdit_IP.setText(_translate("Form", "172.28.1.100"))
         self.lineEdit_Port.setText(_translate("Form", "65432"))
         self.button_close.setText(_translate("Form", "Close"))
         self.button_save.setText(_translate("Form", "Save Log"))
@@ -222,4 +229,5 @@ class Ui_Form(object):
         self.label_2.setText(_translate("Form", "On-Time [s]"))
         self.button_HW_on.setText(_translate("Form", "ON"))
         self.button_HW_off.setText(_translate("Form", "OFF!"))
+
 

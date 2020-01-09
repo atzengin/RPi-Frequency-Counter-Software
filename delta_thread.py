@@ -178,6 +178,22 @@ class Delta(QObject):
         self.gui.button_save.clicked.connect(self.saveTXT)
         self.gui.button_close.clicked.connect(self.close)
         
+        # self.gui.button_HW_off.setStyleSheet(
+        #     "QPushButton {"
+        #         "margin: 1px;"
+        #         "border-color: rgb(173, 174, 175);"
+        #         "border-style: outset;"
+        #         "border-radius: 3px;"
+        #         "border-width: 1px;"
+        #         "color: black;"
+        #         "background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgb(247, 247, 247), stop: 1 rgb(222, 222, 222));"
+        #     "}"
+        #     "QPushButton:pressed {"
+        #         "background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgb(222, 222, 222), stop: 1 rgb(247, 247, 247));"
+        #     "}"
+        # )
+        
+        
         # self.gui.on_time.setStyleSheet(
         #                         #"QSpinBox::up-arrow { border-left: 17px solid none;"
         #                         #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
@@ -276,8 +292,6 @@ class Delta(QObject):
             self.gui.liste_sayim.append("Interval : " + format(scan_interval) + " ms")
             
             self.gui.liste_sayim.append("Start Acquisition")
-            self.gui.liste_sayim.append(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()))
-            self.gui.liste_sayim.append("Timestamp\tCH1 Count\tCH1 Count/sec\tCH2 Count\tCH2 Count/sec\nStarting in ")
             self.gui.button_stop.setText("Stop Acquisition")
             
             if self.gui.checkbox_send_TCP.isChecked() == 1:
@@ -286,11 +300,20 @@ class Delta(QObject):
                     #self.s.connect((TCP_IP , TCP_PORT))
                     self.s.connect((self.gui.lineEdit_IP.text(), int(self.gui.lineEdit_Port.text())))
                     self.s.sendall(b'Connected')
+                    self.TCPokText = "<span style=\" font-size:8pt; font-weight:600; color:#00ff00;\" >"
+                    self.TCPokText += 'TCP Connection OK'
+                    self.TCPokText += "</span>"
                     print('TCP Connection OK')
-                    self.gui.liste_sayim.append('TCP Connection OK')
+                    self.gui.liste_sayim.append(self.TCPokText)
                 except:
+                    self.TCPngText = "<span style=\" font-size:8pt; font-weight:600; color:#ff0000;\" >"
+                    self.TCPngText += 'TCP Connection NG'
+                    self.TCPngText += "</span>"
                     print('TCP Connection NG!')
-                    self.gui.liste_sayim.append('TCP Connection NG!')
+                    self.gui.liste_sayim.append(self.TCPngText)
+            
+            self.gui.liste_sayim.append(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()))
+            self.gui.liste_sayim.append("Timestamp\tCH1 Count\tCH1 Count/sec\tCH2 Count\tCH2 Count/sec\nStarting in ")
             
             self.state = 1
 
@@ -318,12 +341,12 @@ class Delta(QObject):
         # wiringpi.delay(1000)
         # wiringpi.digitalWrite(relay[0], 1)
         
-        self.gui.button_HW_off.setFlat(True)
-        self.palette = self.gui.button_HW_off.palette()
-        self.role = self.gui.button_HW_off.backgroundRole() #choose whatever you like
-        self.palette.setColor(self.role, QColor('red'))
-        self.gui.button_HW_off.setPalette(self.palette)
-        self.gui.button_HW_off.setAutoFillBackground(True)
+        #self.gui.button_HW_off.setFlat(True)
+        #self.palette = self.gui.button_HW_off.palette()
+        #self.role = self.gui.button_HW_off.backgroundRole() #choose whatever you like
+        #self.palette.setColor(self.role, QColor('red'))
+        #self.gui.button_HW_off.setPalette(self.palette)
+        #self.gui.button_HW_off.setAutoFillBackground(True)
         
         self.ontime_thread = timerThread(self.gui.on_time.value()*1000)  # This is the thread object
         self.ontime_thread.signal.connect(self.HWOFF)
@@ -349,8 +372,8 @@ class Delta(QObject):
         # wiringpi.delay(1000)
         # wiringpi.digitalWrite(relay[1], 1)
         
-        self.gui.button_HW_off.setFlat(False)
-        self.gui.button_HW_off.setAutoFillBackground(True)
+        #self.gui.button_HW_off.setFlat(False)
+        #self.gui.button_HW_off.setAutoFillBackground(True)
         
         if 'ontime_thread' in locals():
             self.ontime_thread.terminate()
@@ -381,8 +404,11 @@ class Delta(QObject):
                 try:
                     self.s.sendall(bytes(str(result), 'utf-8'))
                 except:
+                    self.TCPerrText = "<span style=\" font-size:8pt; font-weight:600; color:#0000ff;\" >"
+                    self.TCPerrText += 'TCP send error!'
+                    self.TCPerrText += "</span>"
                     print('TCP send error!')
-                    self.gui.liste_sayim.append('TCP send error!')
+                    self.gui.liste_sayim.append(self.TCPerrText)
             
             #self.s.sendall(b'tarik')
             QtWidgets.QApplication.processEvents() #update gui for pyqt
