@@ -101,7 +101,7 @@ class dataAcquisitionTimer(QObject):
     signal = pyqtSignal('PyQt_PyObject')
     
     def __init__(self, interval):
-        QThread.__init__(self)
+        QObject.__init__(self)
         
         self.interval = interval
         self.data_timer = QTimer()
