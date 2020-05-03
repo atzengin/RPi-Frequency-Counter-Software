@@ -1,17 +1,16 @@
 #!/usr/bin/python3
 
 # IMPORTANT
-# WiringPi must be installed
+# WirinPi must be installed
 
 import sys
 import wiringpi
 import ui
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import QTimer, QThread, pyqtSignal, QObject, QDateTime, QCoreApplication
+from PyQt5.QtCore import QThread, pyqtSignal, QObject, QDateTime, QCoreApplication
 import time
 import socket
-import os
 
 
 # Read first 16 bits of Wiring Pins
@@ -21,10 +20,14 @@ byteSelect = [5,6,13,19] # 4 bit for byte-selection GAL = 5, GAU = 6, GBL = 13, 
 reset = 20
 relay = [12, 16]
 rclk = 26
-   
+
+
+
+
 # See this page for setup :http://wiringpi.com/reference/setup/ 
 wiringpi.wiringPiSetupGpio()
 #wiringpi.wiringPiSetupSys()
+scan_interval=200 # ms
 
 
 def setup_pi(): 
@@ -97,55 +100,75 @@ class timerThread(QThread):
         print('t')
         
 
-class dataAcquisitionTimer(QObject):
+class CloneThread(QThread):
     signal = pyqtSignal('PyQt_PyObject')
-    
+    wiringpi.wiringPiSetupGpio()
     def __init__(self, interval):
-        QObject.__init__(self)
-        
+        QThread.__init__(self)
         self.interval = interval
-        self.data_timer = QTimer()
-        self.data_timer.timeout.connect(self.getData)
-        self.data_timer.start(self.interval)
+         
+    # run method gets called when we start the thread
+    def run(self):
         
-    def stop(self):
-        self.data_timer.stop()
-        del self.data_timer
-        
-    def getData(self):
-        self.currentTime = QDateTime.currentMSecsSinceEpoch()
-        
-        wiringpi.digitalWrite(byteSelect[0], 0) # select the first byte
-        self.data1 = self.read(0) # read first counter
-        self.data5 = self.read(1) # read second counter
-        wiringpi.digitalWrite(byteSelect[0], 1)
-        
-        wiringpi.digitalWrite(byteSelect[1], 0) # select the second byte
-        self.data2 = self.read(0) # read first counter
-        self.data6 = self.read(1) # read second counter
-        wiringpi.digitalWrite(byteSelect[1], 1)
-        
-        wiringpi.digitalWrite(byteSelect[2], 0) # select the third byte
-        self.data3 = self.read(0) # read first counter
-        self.data7 = self.read(1) # read second counter
-        wiringpi.digitalWrite(byteSelect[2], 1)
-        
-        wiringpi.digitalWrite(byteSelect[3], 0) # select the forth byte
-        self.data4 = self.read(0) # read first counter
-        self.data8 = self.read(1) # read second counter
-        wiringpi.digitalWrite(byteSelect[3], 1)
-        
-        # reset the counter
-        wiringpi.digitalWrite(reset, 0)
-        wiringpi.delayMicroseconds(1)
-        wiringpi.digitalWrite(reset, 1)
-        
-        self.data_cnt1 = (self.data4<<24) | (self.data3<<16) | (self.data2<<8) | (self.data1)
-        self.data_cnt2 = (self.data8<<24) | (self.data7<<16) | (self.data6<<8) | (self.data5)
-        self.countms_cnt1 = str(self.data_cnt1*(1000/self.interval))
-        self.countms_cnt2 = str(self.data_cnt2*(1000/self.interval))
+        while True:
+            data = 0
+            
+            # reset the counter
+            wiringpi.digitalWrite(reset, 0)
+            wiringpi.delayMicroseconds(1)
+            # wiringpi.delayMicroseconds(1)
+            wiringpi.digitalWrite(reset, 1)
+            # print(self.interval)
+            
+            #wiringpi.delay(self.interval-2) # Delay for interval ms
+            time.sleep(((self.interval)/1000))
+            #time.sleep(0.99838)
+            
+            ## store the count value into internal storage register
+            #wiringpi.digitalWrite(rclk, 1)
+            ##wiringpi.delayMicroseconds(1)
+            #wiringpi.digitalWrite(rclk, 0)
 
-        self.signal.emit([self.data_cnt1, self.countms_cnt1, self.data_cnt2, self.countms_cnt2, self.currentTime])
+    
+            wiringpi.digitalWrite(byteSelect[0], 0) # select the first byte
+            #data1 = wiringpi.digitalReadByte() # read the first 8 bits
+            #data5 = wiringpi.digitalRead(8) # read the first 8 bits
+            data1 = self.read(0) # read first counter
+            data5 = self.read(1) # read second counter
+            wiringpi.digitalWrite(byteSelect[0], 1)
+            
+            wiringpi.digitalWrite(byteSelect[1], 0) # select the second byte
+            #data2 = wiringpi.digitalReadByte()# read data
+            #data6 = wiringpi.digitalReadByte2() #
+            data2 = self.read(0) # read first counter
+            data6 = self.read(1) # read second counter
+            wiringpi.digitalWrite(byteSelect[1], 1)
+            
+            wiringpi.digitalWrite(byteSelect[2], 0) # select the third byte
+            #data3 = wiringpi.digitalReadByte() # read data
+            #data7 = wiringpi.digitalReadByte2() # 
+            data3 = self.read(0) # read first counter
+            data7 = self.read(1) # read second counter
+            wiringpi.digitalWrite(byteSelect[2], 1)
+            
+            wiringpi.digitalWrite(byteSelect[3], 0) # select the forth byte
+            #data4 = wiringpi.digitalReadByte() # read data
+            #data8 = wiringpi.digitalReadByte2() # 
+            data4 = self.read(0) # read first counter
+            data8 = self.read(1) # read second counter
+            wiringpi.digitalWrite(byteSelect[3], 1)
+            
+            
+            data_cnt1 = (data4<<24) | (data3<<16) | (data2<<8) | (data1)
+            data_cnt2 = (data8<<24) | (data7<<16) | (data6<<8) | (data5)
+            countms_cnt1 = str(data_cnt1*(1000/self.interval))
+            countms_cnt2 = str(data_cnt2*(1000/self.interval))
+            
+            #print("data = ", countms_cnt1, data_cnt1, data4, data3, data2, data1, countms_cnt2, data_cnt2, data8, data7, data6, data5)
+            
+            #count = str(bin(data))
+            self.signal.emit([data_cnt1, countms_cnt1, data_cnt2, countms_cnt2, QDateTime.currentMSecsSinceEpoch()])
+            #gui.liste_sayim.append(str(data*(1000/self.scan_interval)))
         
     def read(self, byte):
         self.veri = 0
@@ -168,7 +191,6 @@ class Delta(QObject):
         self.form = QtWidgets.QWidget()
         self.gui.setupUi(self.form)
         self.form.setGeometry(0, 40, 800, 450)
-        self.form.setWindowTitle('Pulse Counter')
         self.gui.button_HW_off.setEnabled(False)
         
         self.gui.button_HW_off.clicked.connect(self.HWOFF)
@@ -178,143 +200,87 @@ class Delta(QObject):
         self.gui.button_save.clicked.connect(self.saveTXT)
         self.gui.button_close.clicked.connect(self.close)
         
-        # self.gui.button_HW_off.setStyleSheet(
-        #     "QPushButton {"
-        #         "margin: 1px;"
-        #         "border-color: rgb(173, 174, 175);"
-        #         "border-style: outset;"
-        #         "border-radius: 3px;"
-        #         "border-width: 1px;"
-        #         "color: black;"
-        #         "background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgb(247, 247, 247), stop: 1 rgb(222, 222, 222));"
-        #     "}"
-        #     "QPushButton:pressed {"
-        #         "background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgb(222, 222, 222), stop: 1 rgb(247, 247, 247));"
-        #     "}"
-        # )
-        
-        
-        # self.gui.on_time.setStyleSheet(
-        #                         #"QSpinBox::up-arrow { border-left: 17px solid none;"
-        #                         #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
-        #                         #"QSpinBox::up-arrow:hover { border-left: 17px solid none;"
-        #                         #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
-        #                         "QSpinBox::up-button { width: 20px; height: 20px; }"
-        #                         #"QSpinBox::up-button:hover { width: 40px; height: 20px; }"
+        self.gui.on_time.setStyleSheet(
+                               #"QSpinBox::up-arrow { border-left: 17px solid none;"
+                               #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
+                               #"QSpinBox::up-arrow:hover { border-left: 17px solid none;"
+                               #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
+                               "QSpinBox::up-button { width: 40px; height: 20px; }"
+                               #"QSpinBox::up-button:hover { width: 40px; height: 20px; }"
  
-        #                         #"QSpinBox::down-arrow { border-left: 17px solid none;"
-        #                         #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
-        #                         #"QSpinBox::down-arrow:hover { border-left: 17px solid none;"
-        #                         #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
-        #                         "QSpinBox::down-button { width: 20; height: 20px; }"
-        #                         #"QSpinBox::down-button:hover { width: 40px; height: 20px; }"
-        #     )
+                               #"QSpinBox::down-arrow { border-left: 17px solid none;"
+                               #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
+                               #"QSpinBox::down-arrow:hover { border-left: 17px solid none;"
+                               #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
+                               "QSpinBox::down-button { width: 40px; height: 20px; }"
+                               #"QSpinBox::down-button:hover { width: 40px; height: 20px; }"
+            )
         
-        # self.gui.interval.setStyleSheet(
-        #                        #"QSpinBox::up-arrow { border-left: 17px solid none;"
-        #                        #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
-        #                        #"QSpinBox::up-arrow:hover { border-left: 17px solid none;"
-        #                        #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
-        #                        "QSpinBox::up-button { width: 40px; height: 20px; }"
-        #                        #"QSpinBox::up-button:hover { width: 40px; height: 20px; }"
+        self.gui.interval.setStyleSheet(
+                               #"QSpinBox::up-arrow { border-left: 17px solid none;"
+                               #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
+                               #"QSpinBox::up-arrow:hover { border-left: 17px solid none;"
+                               #"border-right: 17px solid none; border-bottom: 17px solid black; width: 0px; height: 0px; }"
+                               "QSpinBox::up-button { width: 40px; height: 20px; }"
+                               #"QSpinBox::up-button:hover { width: 40px; height: 20px; }"
  
-        #                        #"QSpinBox::down-arrow { border-left: 17px solid none;"
-        #                        #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
-        #                        #"QSpinBox::down-arrow:hover { border-left: 17px solid none;"
-        #                        #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
-        #                        "QSpinBox::down-button { width: 40px; height: 20px; }"
-        #                        #"QSpinBox::down-button:hover { width: 40px; height: 20px; }"
-        #     )
+                               #"QSpinBox::down-arrow { border-left: 17px solid none;"
+                               #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
+                               #"QSpinBox::down-arrow:hover { border-left: 17px solid none;"
+                               #"border-right: 17px solid none; border-top: 17px solid black; width: 0px; height: 0px; }"
+                               "QSpinBox::down-button { width: 40px; height: 20px; }"
+                               #"QSpinBox::down-button:hover { width: 40px; height: 20px; }"
+            )
         
+
         self.timestamp = 0
-        self.updateInfo()
+        self.clear()
+#        self.gui_thread = CloneThread()  # This is the thread object
+#        #Connect the signal from the thread to the finished method
+#        self.gui_thread.signal.connect(self.finished)
+#        self.gui_thread.start()
+        
         self.state = 0 # data acquisition state
 
 
     def close(self):
         self.HWOFF()
-        if self.gui.checkbox_send_TCP.isChecked() == 1:
-            try:
-                self.s.sendall(b'close')
-            except:
-                print('Close TCP signal has not been sent!')
         QCoreApplication.instance().quit()
        
         
     def clear(self):
-        
-        qm = QtWidgets.QMessageBox
-        self.reply = qm.question(None,'Warning', "Are you sure to clear logs? Be sure if they are saved!", qm.Yes | qm.No)
-
-        if self.reply == qm.Yes:
-            self.gui.liste_sayim.clear()
-            self.updateInfo()
-    
-    
-    def updateInfo(self):
-        
+        self.gui.liste_sayim.clear()
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.s.connect(("8.8.8.8", 80))
+        self.gui.liste_sayim.append("IP Address : " + self.s.getsockname()[0])
         self.gui.liste_sayim.append(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()))
-        self.gui.labelCH1.setText("")
-        self.gui.labelCH2.setText("")
-        self.f = os.popen("ifconfig wlan0 | grep \"inet\ \" | awk '{print $2}'")
-        self.ip = self.f.read()
-        print("IP Address : " + str(self.ip))
-        self.gui.liste_sayim.append('IP Address : '+ str(self.ip))
+        self.s.close()
     
     
     def startStop(self):
         if self.state == 1: #stop
-            print("data acquisition stopped")
+            print("data acquisition started")
             self.gui.liste_sayim.append("Timestamp\tCH1 Count\tCH1 Count/sec\tCH2 Count\tCH2 Count/sec")
             self.gui.liste_sayim.append("Stop Acquisition")
-            
-            self.gui_timer.stop()
-            del self.gui_timer
-            
-            self.gui.button_stop.setText("Start Acquisition")
+            self.gui_thread.terminate()
+            del self.gui_thread
+            self.gui.button_stop.setText("Start Data Acquisition")
             self.state = 0
             self.gui.interval.setEnabled(True)
-            self.gui.checkbox_send_TCP.setEnabled(True)
-            self.gui.lineEdit_IP.setEnabled(True)
-            self.gui.lineEdit_Port.setEnabled(True)
             self.timestamp = 0
         elif self.state == 0: #start
-            print("data acquisition started")
+            print("data acquisition stopped")
             self.gui.interval.setEnabled(False)
-            self.gui.checkbox_send_TCP.setEnabled(False)
-            self.gui.lineEdit_IP.setEnabled(False)
-            self.gui.lineEdit_Port.setEnabled(False)
             scan_interval = self.gui.interval.value()
-            
-            self.gui_timer = dataAcquisitionTimer(scan_interval)
-            self.firstData = 10  # how many count data will be dropped at first
-            self.gui_timer.signal.connect(self.finished)
-            self.gui.liste_sayim.append("Interval : " + format(scan_interval) + " ms")
-            
+            self.gui_thread = CloneThread(scan_interval)  # This is the thread object
+            self.gui_thread.signal.connect(self.finished)
+            self.gui.liste_sayim.append("Interval : " + format(scan_interval))
+            self.gui_thread.start()
+            self.start_time = QDateTime.currentMSecsSinceEpoch() # start time in [ms]
             self.gui.liste_sayim.append("Start Acquisition")
-            self.gui.button_stop.setText("Stop Acquisition")
-            
-            if self.gui.checkbox_send_TCP.isChecked() == 1:
-                try:
-                    self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    #self.s.connect((TCP_IP , TCP_PORT))
-                    self.s.connect((self.gui.lineEdit_IP.text(), int(self.gui.lineEdit_Port.text())))
-                    self.s.sendall(b'Connected')
-                    self.TCPokText = "<span style=\" font-size:8pt; font-weight:600; color:#00ff00;\" >"
-                    self.TCPokText += 'TCP Connection OK'
-                    self.TCPokText += "</span>"
-                    print('TCP Connection OK')
-                    self.gui.liste_sayim.append(self.TCPokText)
-                except:
-                    self.TCPngText = "<span style=\" font-size:8pt; font-weight:600; color:#ff0000;\" >"
-                    self.TCPngText += 'TCP Connection NG'
-                    self.TCPngText += "</span>"
-                    print('TCP Connection NG!')
-                    self.gui.liste_sayim.append(self.TCPngText)
-            
             self.gui.liste_sayim.append(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()))
-            self.gui.liste_sayim.append("Timestamp\tCH1 Count\tCH1 Count/sec\tCH2 Count\tCH2 Count/sec\nStarting in ")
-            
+            self.gui.liste_sayim.append("Timestamp\tCH1 Count\tCH1 Count/sec\tCH2 Count\tCH2 Count/sec")
+            self.gui.button_stop.setText("Stop Data Acquisition")
             self.state = 1
 
 
@@ -341,12 +307,12 @@ class Delta(QObject):
         # wiringpi.delay(1000)
         # wiringpi.digitalWrite(relay[0], 1)
         
-        #self.gui.button_HW_off.setFlat(True)
-        #self.palette = self.gui.button_HW_off.palette()
-        #self.role = self.gui.button_HW_off.backgroundRole() #choose whatever you like
-        #self.palette.setColor(self.role, QColor('red'))
-        #self.gui.button_HW_off.setPalette(self.palette)
-        #self.gui.button_HW_off.setAutoFillBackground(True)
+        self.gui.button_HW_off.setFlat(True)
+        self.palette = self.gui.button_HW_off.palette()
+        self.role = self.gui.button_HW_off.backgroundRole() #choose whatever you like
+        self.palette.setColor(self.role, QColor('red'))
+        self.gui.button_HW_off.setPalette(self.palette)
+        self.gui.button_HW_off.setAutoFillBackground(True)
         
         self.ontime_thread = timerThread(self.gui.on_time.value()*1000)  # This is the thread object
         self.ontime_thread.signal.connect(self.HWOFF)
@@ -372,8 +338,8 @@ class Delta(QObject):
         # wiringpi.delay(1000)
         # wiringpi.digitalWrite(relay[1], 1)
         
-        #self.gui.button_HW_off.setFlat(False)
-        #self.gui.button_HW_off.setAutoFillBackground(True)
+        self.gui.button_HW_off.setFlat(False)
+        self.gui.button_HW_off.setAutoFillBackground(True)
         
         if 'ontime_thread' in locals():
             self.ontime_thread.terminate()
@@ -381,46 +347,20 @@ class Delta(QObject):
 
 
     def finished(self, result):
-        #print(self.state)
-        
-        if self.firstData > 0:
-            # do nothing. drop first data. 
-            # will find more innovative solution here!
-            self.firstData -= 1
-            self.start_time = result[4] # get starting time
-            #self.gui.liste_sayim.append('Starting in ' + str(self.firstData))
-            self.gui.liste_sayim.insertPlainText(str(self.firstData) + ' ')
-            
-        else:
-
-            self.timestamp = result[4] - self.start_time
-            self.gui.liste_sayim.append(format(self.timestamp) + "[ms]\t" + format(result[0]) + "\t" + format(result[1]) + "\t" + format(result[2]) + "\t" + format(result[3]))
-            self.gui.labelCH1.setText( str( float("{0:.2f}".format(float(result[1])/1000)) ) + "\tkHz")
-            self.gui.labelCH2.setText( str( float("{0:.2f}".format(float(result[3])/1000)) ) + "\tkHz")
-            #print(result[0])
-            #print(type(bytes(str(result[0]), 'utf-8')))
-            
-            if self.gui.checkbox_send_TCP.isChecked() == 1:
-                try:
-                    self.s.sendall(bytes(str(result), 'utf-8'))
-                except:
-                    self.TCPerrText = "<span style=\" font-size:8pt; font-weight:600; color:#0000ff;\" >"
-                    self.TCPerrText += 'TCP send error!'
-                    self.TCPerrText += "</span>"
-                    print('TCP send error!')
-                    self.gui.liste_sayim.append(self.TCPerrText)
-            
-            #self.s.sendall(b'tarik')
-            QtWidgets.QApplication.processEvents() #update gui for pyqt
+        #print("c")
+        self.timestamp = result[4] - self.start_time
+        self.gui.liste_sayim.append(format(self.timestamp) + "[ms]\t" + format(result[0]) + "\t" + format(result[1]) + "\t" + format(result[2]) + "\t" + format(result[3]))
+        self.gui.labelCH1.setText( str( float("{0:.2f}".format(float(result[1])/1000)) ) + "\tkHz")
+        self.gui.labelCH2.setText( str( float("{0:.2f}".format(float(result[3])/1000)) ) + "\tkHz")
+        QtWidgets.QApplication.processEvents() #update gui for pyqt
 
 
 def main():
     setup_pi()
     app = QtWidgets.QApplication(sys.argv)
     delta = Delta(app)
-    #delta.form.showFullScreen()
+    delta.form.showFullScreen()
     #delta.form.show()
-    delta.form.showMaximized()
     sys.exit(app.exec_())
     
 
